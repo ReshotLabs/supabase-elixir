@@ -4,6 +4,7 @@ defmodule Supabase.Storage.Objects do
   alias Supabase.Storage.Object
 
   @endpoint "/storage/v1/object"
+  @transformed_endpoint "/storage/v1/render/image"
 
   @spec list(Connection.t(), String.t() | Bucket.t(), String.t(), keyword()) ::
           {:ok, list(Object.t())} | {:error, map()}
@@ -129,14 +130,14 @@ defmodule Supabase.Storage.Objects do
     query_params = if download_query_param != "", do: [download_query_param | query_params], else: query_params
 
     transform_opts = Keyword.get(opts, :transform, %{})
-    IO.inspect(transform_opts)
-
     transformation_query = transform_opts_to_query_string(transform_opts)
     query_params = if transformation_query != "", do: [transformation_query | query_params], else: query_params
 
     query_string = if query_params != [], do: "?#{Enum.join(query_params, "&")}", else: ""
 
-    {:ok, %{public_url: "#{base_url}#{@endpoint}/public/#{full_path}#{query_string}"}}
+    endpoint = if transformation_query != "", do: @transformed_endpoint, else: @endpoint
+
+    {:ok, %{public_url: "#{base_url}#{endpoint}/public/#{full_path}#{query_string}"}}
   end
 
   def update(%Connection{} = conn, bucket, path, file, opts) do
