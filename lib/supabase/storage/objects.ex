@@ -113,6 +113,32 @@ defmodule Supabase.Storage.Objects do
     )
   end
 
+  @spec public_url(Connection.t(), Bucket.t() | String.t(), String.t(), keyword) ::
+          {:error, map()} | {:ok, map()}
+  def public_url(conn, bucket, object_path, opts \\ [])
+
+  def public_url(%Connection{} = conn, %Bucket{} = bucket, object_path, opts),
+    do: public_url(conn, bucket.name, object_path, opts)
+
+  def public_url(%Connection{:base_url => base_url} = conn, bucket_name, object_path, opts) do
+    query_params = []
+    full_path = "#{bucket_name}/#{object_path}"
+
+    download = Keyword.get(opts, :download, nil)
+    download_query_param = if download != nil, do: "download=#{download}", else: ""
+    query_params = if download_query_param != "", do: [download_query_param | query_params], else: query_params
+
+    transform_opts = Keyword.get(opts, :transform, %{})
+    IO.inspect(transform_opts)
+
+    transformation_query = transform_opts_to_query_string(transform_opts)
+    query_params = if transformation_query != "", do: [transformation_query | query_params], else: query_params
+
+    query_string = if query_params != [], do: "?#{Enum.join(query_params, "&")}", else: ""
+
+    {:ok, %{public_url: "#{base_url}#{@endpoint}/public/#{full_path}#{query_string}"}}
+  end
+
   def update(%Connection{} = conn, bucket, path, file, opts) do
     upload_file(conn, bucket, path, file, Keyword.put(opts, :method, :put))
   end
@@ -165,6 +191,25 @@ defmodule Supabase.Storage.Objects do
     case options[key] do
       nil -> body
       value -> Map.put(body, key, value)
+    end
+  end
+
+  defp transform_opts_to_query_string(transform) do
+    case transform do
+      %{:width => width, :height => height, :resize => resize} ->
+        "width=#{width}&height=#{height}&resize=#{resize}"
+      %{:width => width, :height => height} ->
+        "width=#{width}&height=#{height}"
+      %{:width => width, :resize => resize} ->
+        "width=#{width}&resize=#{resize}"
+      %{:height => height, :resize => resize} ->
+        "height=#{height}&resize=#{resize}"
+      %{:width => width} ->
+        "width=#{width}"
+      %{:height => height} ->
+        "height=#{height}"
+      _ ->
+        ""
     end
   end
 end

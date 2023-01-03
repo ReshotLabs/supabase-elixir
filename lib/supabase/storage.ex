@@ -325,4 +325,8 @@ defmodule Supabase.Storage do
   def create_signed_url(%Connection{bucket: bucket} = conn, path, expires_in) do
     Objects.sign(conn, bucket, path, expires_in: expires_in)
   end
+
+  def get_public_url(%Connection{bucket: bucket} = conn, path, opts \\ []) do
+    Objects.public_url(conn, bucket, path, opts)
+  end
 end
